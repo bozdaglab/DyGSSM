@@ -1,0 +1,5 @@
+*tester
+*model_log
+.vscode/
+pickle_data/
+__pycache__/
