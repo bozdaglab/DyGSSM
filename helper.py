@@ -13,6 +13,9 @@ import torch
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import sys
+from pathlib import Path
+sys.path.append(Path(__file__).parent)
 from run.main_roland_call_wingnn import call
 from dataset_prep import load_r
 import os

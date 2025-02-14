@@ -17,3 +17,17 @@ Install the python dependencies
 pip install -r requirements.txt
 
 ```
+
+### To run GyGSSM on ROLAND dataset
+1 - Download roland code 
+```shell script
+git@github.com:snap-stanford/roland.git
+
+```
+2 - cut and past main_roland_call_wingnn.py into roland-master/run repo
+3 - run 
+```shell script
+cd roland-master
+pip install -e .
+./get_roland_public_data.sh will generate the public dataset folder and download the datasets
+```
