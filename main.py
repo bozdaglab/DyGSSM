@@ -7,7 +7,7 @@ import random
 import numpy as np
 import sys
 sys.path.append(f"{Path(__file__).parent.parent}")
-import model
+import models
 from test import test
 from train import train
 from config import cfg
@@ -41,23 +41,23 @@ if __name__ == '__main__':
         n_node = graph_l[0].num_nodes()
 
 
-        model = model.Model(n_dim, args.out_dim, args.num_hidden, args.num_layers, args.dropout, args).to(device)
+        model = models.Model(n_dim, args.out_dim, args.num_hidden, args.num_layers, args.dropout, args).to(device)
         if args.light_gru:
-            sequential_model = model.GRUModel(
+            sequential_model = models.GRUModel(
             input_dim=n_node,
             hidden_dim=args.num_hidden,
             output_dim=args.hidden_dim,
             num_layer=args.seq_num_layer,
             ).to(device)
         else:
-            sequential_model = model.SeqRW(
+            sequential_model = models.SeqRW(
                 inp_size=n_node,
                 emb_dim=args.num_hidden,
                 hidden=args.hidden_dim,
                 num_layers=args.seq_num_layer,
                 dropout=args.dropout_1,
             ).to(device)
-        cross_attention = model.CrossAttention(
+        cross_attention = models.CrossAttention(
             embed_dim=args.hidden_dim,
             num_heads=args.num_heads,
             dropout=args.dropout_1,
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         state_dims = [i.shape for i in model.parameters()]
         fast_weights = list(map(lambda p: p[0], zip(model.parameters())))
         state_dim = len(fast_weights)
-        hippo_model = model.HIPPO(state_dim=state_dim)
+        hippo_model = models.HIPPO(state_dim=state_dim)
 
         model.train()
         sequential_model.train()

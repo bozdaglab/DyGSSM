@@ -73,7 +73,7 @@ def edge_index_difference(edge_all, edge_except, num_nodes):
     return torch.stack([i, j], dim=0).long()
 
 
-def gen_negative_edges(edge_index, num_neg_per_node, num_nodes):
+def gen_negative_edges(edge_index, num_neg_per_node, device, num_nodes):
     src_lst = torch.unique(edge_index[0])  # get unique senders.
     num_neg_per_node = int(1.5 * num_neg_per_node)  # add some redundancy.
     i = src_lst.repeat_interleave(num_neg_per_node)
@@ -90,7 +90,7 @@ def gen_negative_edges(edge_index, num_neg_per_node, num_nodes):
 
 
 @torch.no_grad()
-def fast_batch_mrr_and_recall(edge_label_index, edge_label, pred_score, num_neg_per_node, num_nodes):
+def fast_batch_mrr_and_recall(edge_label_index, edge_label, pred_score, num_neg_per_node, num_nodes, device):
 
     src_lst = torch.unique(edge_label_index[0], sorted=True)
     num_users = len(src_lst)
@@ -110,14 +110,14 @@ def fast_batch_mrr_and_recall(edge_label_index, edge_label, pred_score, num_neg_
     # We want to compute the rank of this edge.
     # Construct an interval of model's performance.
     if cfg.metric.mrr_method == 'mean':
-        best_p_pos = scatter_mean(src=p_pos, index=edge_pos[0],
+        best_p_pos = scatter_mean(src=p_pos, index=edge_pos[0].to(device),
                                   dim_size=num_nodes)
     elif cfg.metric.mrr_method == 'min':
-        best_p_pos, _ = scatter_min(src=p_pos, index=edge_pos[0],
+        best_p_pos, _ = scatter_min(src=p_pos, index=edge_pos[0].to(device),
                                     dim_size=num_nodes)
     else:
         # The default setting, consider the rank of the most confident edge.
-        best_p_pos, _ = scatter_max(src=p_pos, index=edge_pos[0],
+        best_p_pos, _ = scatter_max(src=p_pos, index=edge_pos[0].to(device),
                                     dim_size=num_nodes)
     # best_p_pos has shape (num_nodes), for nodes not in src_lst has value 0.
     # 取出了节点上的最大概率
@@ -170,14 +170,14 @@ def fast_batch_mrr_and_recall(edge_label_index, edge_label, pred_score, num_neg_
 
 
 @torch.no_grad()
-def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model, cross_attention, num_neg_per_node: int = 1000):
+def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model, cross_attention, device, num_neg_per_node: int = 1000):
     if num_neg_per_node == -1:
         # Do not report rank-based metrics, used in debug mode.
         return 0, 0, 0, 0
     # Get positive edge indices.
     edge_index = graph.edge_label_index[:, graph.edge_label == 1]
 
-    neg_edge_index = gen_negative_edges(edge_index, num_neg_per_node, num_nodes=graph.num_nodes())
+    neg_edge_index = gen_negative_edges(edge_index, num_neg_per_node, device, num_nodes=graph.num_nodes())
 
     new_edge_label_index = torch.cat((edge_index, neg_edge_index), dim=1)
     new_edge_label = torch.cat((torch.ones(edge_index.shape[1]),
@@ -185,16 +185,16 @@ def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model,
                                 ), dim=0)
 
     # Construct evaluation samples.
-    graph.edge_label_index = new_edge_label_index.to('cuda').long()
-    graph.edge_label = new_edge_label.to('cuda').long()
+    graph.edge_label_index = new_edge_label_index.to(device).long()
+    graph.edge_label = new_edge_label.to(device).long()
 
     # move state to gpu
-    _, seq_embeddings = sequential_model(graph)
-    pred, _ = model(graph, x.to("cuda"), fast_weights, seq_embeddings, cross_attention)
-    pred = pred.to('cuda')
+    _, seq_embeddings = sequential_model(graph, device)
+    pred, _ = model(graph, x.to(device), fast_weights, seq_embeddings, cross_attention)
+    pred = pred.to(device)
 
     mrr, recall_at = fast_batch_mrr_and_recall(graph.edge_label_index, graph.edge_label,
-                                               pred, num_neg_per_node, graph.num_nodes())
+                                               pred, num_neg_per_node, graph.num_nodes(), device)
 
     return mrr, recall_at[1], recall_at[3], recall_at[10]
 
