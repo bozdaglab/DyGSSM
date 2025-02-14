@@ -1,7 +1,12 @@
 # DyGSSM
+DyGSSM: Multi-view Dynamic Graph Embeddings with State
+Space Model Gradient Update
 
+# This repository is our PyTorch implementation of DyGSSM.
+
+
+## How to run 
 # Create and activate environment
-
 ```shell script
 conda create -p env_name python=3.8.10 -y
 conda activate env_name
@@ -32,3 +37,9 @@ cd roland-master
 pip install -e .
 ./get_roland_public_data.sh will generate the public dataset folder and download the datasets
 ```
+
+
+### Acknowledgement
+Our source code and data processing are built heavily based on the code of [ROLAND](https://github.com/snap-stanford/roland) and [WinGNN](https://github.com/pursuecong/WinGNN)
+
+
