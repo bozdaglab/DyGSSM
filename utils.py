@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim as optim
-from DyGSSM.config import cfg
+from config import cfg
 from torch_scatter import scatter_max, scatter_mean, scatter_min
 
 

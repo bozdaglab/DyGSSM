@@ -3,3 +3,6 @@
 .vscode/
 pickle_data/
 __pycache__/
+env_name/
+roland-master/
+roland_public_data
