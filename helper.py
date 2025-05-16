@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 import sys
 from pathlib import Path
-sys.path.append(Path(__file__).parent)
-from run.main_roland_call_wingnn import call
+# sys.path.append(Path(__file__).parent / "roland-master")
+from roland.run.main_roland_call_wingnn import call
 from dataset_prep import load_r
 import os
 

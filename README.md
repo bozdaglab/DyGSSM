@@ -8,10 +8,10 @@ Space Model Gradient Update
 ## How to run 
 # Create and activate environment
 ```shell script
-conda create -p env_name python=3.8.10 -y
-conda activate env_name
+conda create -p dygssm_env python=3.8.10 -y
+conda activate dygssm_env
 pip install torch==2.2.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install torch-scatter==2.0.9 -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
 pip install torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
 pip install dgl-cu117 -f https://data.dgl.ai/wheels/repo.html
 ```
@@ -29,13 +29,13 @@ pip install -r requirements.txt
 git@github.com:snap-stanford/roland.git
 
 ```
-2 - cut and past main_roland_call_wingnn.py into roland-master/run repo
+2 - cut and past main_roland_call_wingnn.py into roland/run repo
 
 3 - run 
 ```shell script
-cd roland-master
+cd roland
 pip install -e .
-./get_roland_public_data.sh will generate the public dataset folder and download the datasets
+get_roland_public_data.sh will generate the public dataset folder and download the datasets
 ```
 
 

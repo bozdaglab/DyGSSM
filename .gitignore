@@ -4,6 +4,12 @@
 pickle_data/
 __pycache__/
 env_name/
-roland-master/
+roland/
 roland_public_data
-env_name2/
+dygssm_env/
+*dblp
+*mooc
+*myket
+*reddit
+*stackoverflow_M
+*wikipedia

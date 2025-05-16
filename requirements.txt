@@ -4,3 +4,6 @@ dask_ml
 csrgraph
 ogb
 seaborn
+deepsnap
+tensorboardX
+tensorboard
