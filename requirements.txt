@@ -7,3 +7,4 @@ seaborn
 deepsnap
 tensorboardX
 tensorboard
+git+https://github.com/dnidever/roland
