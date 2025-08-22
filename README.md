@@ -29,8 +29,10 @@ pip install -r requirements.txt
 git@github.com:snap-stanford/roland.git
 
 ```
-2 - cut and past main_roland_call_wingnn.py into roland/run repo
-
+2 - Move main_roland_call_wingnn.py to roland/run repo
+```shell script
+mv main_roland_call_wingnn.py roland/run
+```
 3 - run 
 ```shell script
 cd roland
