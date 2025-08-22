@@ -6,7 +6,7 @@ Space Model Gradient Update
 
 
 ## How to run 
-# Create and activate environment
+### Create and activate environment
 ```shell script
 conda create -p dygssm_env python=3.8.10 -y
 conda activate dygssm_env
@@ -41,5 +41,6 @@ get_roland_public_data.sh will generate the public dataset folder and download t
 
 ### Acknowledgement
 Our source code and data processing are built heavily based on the code of [ROLAND](https://github.com/snap-stanford/roland) and [WinGNN](https://github.com/pursuecong/WinGNN)
+
 
 
