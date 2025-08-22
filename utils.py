@@ -1,63 +1,35 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Description :
-import dgl
 import numpy as np
 import torch
-import torch.nn as nn
 from torch import optim as optim
 from config import cfg
 from torch_scatter import scatter_max, scatter_mean, scatter_min
 
 
-def create_optimizer(opt, model, sequential_model, cross_attention, lr, weight_decay):
+def create_optimizer(opt, model,  lr, weight_decay):
     opt_lower = opt.lower()
-    parameters_model = list(model.parameters()) + list(cross_attention.parameters())
-    parameters_gru = list(sequential_model.parameters()) + list(cross_attention.parameters())
+    parameters_model = model.parameters()
     opt_args = dict(lr=lr, weight_decay=weight_decay)
 
     opt_split = opt_lower.split("_")
     opt_lower = opt_split[-1]
     if opt_lower == "adam":
         optimizer_model = optim.Adam(parameters_model, **opt_args)
-        optimizer_gru = optim.Adam(parameters_gru, **opt_args)
     elif opt_lower == "adamw":
         optimizer_model = optim.AdamW(parameters_model, **opt_args)
-        optimizer_gru = optim.AdamW(parameters_gru, **opt_args)
 
     elif opt_lower == "adadelta":
         optimizer_model = optim.Adadelta(parameters_model, **opt_args)
-        optimizer_gru = optim.Adadelta(parameters_gru, **opt_args)
 
     elif opt_lower == "radam":
         optimizer_model = optim.RAdam(parameters_model, **opt_args)
-        optimizer_gru = optim.RAdam(parameters_gru, **opt_args)
 
     elif opt_lower == "sgd":
         opt_args["momentum"] = 0.9
         optimizer_model = optim.SGD(parameters_model, **opt_args)
-        optimizer_gru = optim.SGD(parameters_gru, **opt_args)
     else:
         assert False and "Invalid optimizer"
 
-    return optimizer_model, optimizer_gru
-
-
-def create_activation(activation):
-    if activation == "relu":
-        return nn.ReLU()
-    elif activation == "tanh":
-        return nn.Tanh()
-    elif activation == "sigmoid":
-        return nn.Sigmoid()
-    elif activation == "leaky_relu":
-        return nn.LeakyReLU()
-    elif activation == "elu":
-        return nn.ELU()
-    elif activation == "softmax":
-        return nn.Softmax()
-
-    raise RuntimeError("activation error, not {}".format(activation))
+    return optimizer_model
 
 
 def edge_index_difference(edge_all, edge_except, num_nodes):
@@ -170,7 +142,7 @@ def fast_batch_mrr_and_recall(edge_label_index, edge_label, pred_score, num_neg_
 
 
 @torch.no_grad()
-def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model, cross_attention, device, num_neg_per_node: int = 1000):
+def report_rank_based_eval_meta(model, graph, x, fast_weights, device, num_neg_per_node: int = 50):
     if num_neg_per_node == -1:
         # Do not report rank-based metrics, used in debug mode.
         return 0, 0, 0, 0
@@ -189,8 +161,7 @@ def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model,
     graph.edge_label = new_edge_label.to(device).long()
 
     # move state to gpu
-    _, seq_embeddings = sequential_model(graph, device)
-    pred, _ = model(graph, x.to(device), fast_weights, seq_embeddings, cross_attention)
+    pred = model(graph.to(device), x.to(device))
     pred = pred.to(device)
 
     mrr, recall_at = fast_batch_mrr_and_recall(graph.edge_label_index, graph.edge_label,
@@ -198,28 +169,6 @@ def report_rank_based_eval_meta(model, graph, x, fast_weights, sequential_model,
 
     return mrr, recall_at[1], recall_at[3], recall_at[10]
 
-
-def rand_prop(graph):
-    features = graph.node_feature
-    n = features.shape[0]
-    # mask
-    drop_rate = cfg.dropnode_rate
-    drop_rates = torch.FloatTensor(np.ones(n) * drop_rate)
-
-    masks = torch.bernoulli(1. - drop_rates).unsqueeze(1).to(features)
-
-    features = masks * features
-
-    return features
-
-
-def update_states(states, fast_weights):
-    count = 0
-    for key in states.keys():
-        assert isinstance(states[key], torch.Tensor)
-        states[key] = fast_weights[count]
-        count += 1
-    return states
 
 
 def paramters_(state):

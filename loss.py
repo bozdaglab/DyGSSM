@@ -23,7 +23,7 @@ def prediction(pred_score, true_l):
 
 
 def Link_loss_meta(pred, y):
-    L = nn.BCELoss()
+    L = nn.BCEWithLogitsLoss()
     pred = pred.float()
     y = y.to(pred)
     loss = L(pred, y)
