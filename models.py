@@ -5,7 +5,7 @@ import dgl.nn as dglnn
 
 
 
-class MessagePassing(nn.Module):
+class DyGSSM(nn.Module):
     def __init__(self,
                 n_noeds, 
                 in_features,
