@@ -2,31 +2,28 @@ import pandas as pd
 import math
 import torch
 from collections import defaultdict
+
 from pathlib import Path
 import random
 import numpy as np
-import models
-from test import test
-from train import train
+import DyGSSM.models as models
+from train_test_models.test_wingnn_settings import test
+from train_test_models.train_wingnn_settings import train
 from config import cfg
 from Logger import getLogger
 from utils import create_optimizer
 from helper import load_data
-from get_args import load_args
 import warnings
 from itertools import product
 import os
 warnings.filterwarnings("ignore")
 
 
-if __name__ == '__main__':
-    path_1 = str(Path(__file__).parent)
-    args = load_args()
-    if not os.path.exists(f"{path_1}/results/{args.dataset}"):
-        os.makedirs(f"{path_1}/results/{args.dataset}")
-        os.makedirs(f"{path_1}/processed_data/{args.dataset}")
-        os.makedirs(f"{path_1}/best_models/{args.dataset}")
-        
+def main(args, path, path_1, model_type):
+    if not os.path.exists(f"{path_1}/results_{model_type}/{args.dataset}"):
+        os.makedirs(f"{path_1}/results_{model_type}/{args.dataset}")
+        os.makedirs(f"{path_1}/processed_data_{model_type}/{args.dataset}")
+        os.makedirs(f"{path_1}/best_models_{model_type}/{args.dataset}")
     hyperparameters  = {
         'lr' : [0.007, 0.003],
         'weight_decay' : [0.0001],
@@ -49,12 +46,16 @@ if __name__ == '__main__':
     }
         dic_keys = '_'.join([str(i) for i in combination])
         for rep in range(0, args.repeat):
-            path = str(Path(__file__).parent)
-            dataset_name = args.dataset
             torch.manual_seed(args.seed)
             random.seed(args.seed)
             np.random.seed(args.seed)
-            graph_l = load_data(path, rep, args, path_1, device)
+            graph_l = load_data(path=path, 
+                                rep=rep, 
+                                args=args, 
+                                path_1=path_1, 
+                                dataset_name=args.dataset,
+                                device=device, 
+                                model_type=model_type)
 
             n_dim = graph_l[0].node_feature.shape[1]
             n_node = graph_l[0].num_nodes()
@@ -72,7 +73,8 @@ if __name__ == '__main__':
                 device=device,
                 fused_model="semantic",
                 bidirectional=False,
-                message_pass_type=hyper["message_pass_type"]).to(device)
+                message_pass_type=hyper["message_pass_type"],
+                train_type="wingnn").to(device)
 
             state_dims = [i.shape for i in model.parameters()]
             fast_weights = list(map(lambda p: p[0], zip(model.parameters())))
@@ -115,7 +117,7 @@ if __name__ == '__main__':
             final_result["all_avg_rl10"].append(result["avg_rl10"])   
         print(final_result)
         res = pd.DataFrame({"metrics":final_result.keys(), "result":final_result.values()})
-        res.to_csv(f"{path}/results/{args.dataset}/{dic_keys}.csv")
-        torch.save(best_graph_model, f"{path}/best_models/{args.dataset}/best_graph_model_{args.dataset}_{dic_keys}.pkl")
-        torch.save(best_state_hippo_model, f"{path}/best_models/{args.dataset}/best_state_hippo_model_{args.dataset}_{dic_keys}.pkl")
+        res.to_csv(f"{path_1}/results_{model_type}/{args.dataset}/{dic_keys}.csv")
+        torch.save(best_graph_model, f"{path_1}/best_models_{model_type}/{args.dataset}/best_graph_model_{args.dataset}_{dic_keys}.pkl")
+        torch.save(best_state_hippo_model, f"{path_1}/best_models_{model_type}/{args.dataset}/best_state_hippo_model_{args.dataset}_{dic_keys}.pkl")
 

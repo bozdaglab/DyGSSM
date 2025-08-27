@@ -17,6 +17,7 @@ class DyGSSM(nn.Module):
                 num_heads, 
                 device,
                 fused_model,
+                train_type,
                 bidirectional,
                 message_pass_type):
         super().__init__()
@@ -31,7 +32,7 @@ class DyGSSM(nn.Module):
         elif message_pass_type == "GAT":
             self.msp1 = dglnn.GATConv(in_features, out_features, num_heads=num_heads, allow_zero_in_degree=True)
             self.msp2 = dglnn.GATConv(out_features, out_features, num_heads=num_heads, allow_zero_in_degree=True)
-
+        self.train_type = train_type
         self.mlp = nn.Sequential(
             nn.Linear(in_features=out_features * 2, out_features=int(out_features)),
             self.create_activation("relu"),
@@ -142,14 +143,23 @@ class DyGSSM(nn.Module):
         inp = torch.stack([x_out, last_out])
         x_fused, _ = self.cross_attention(inp)
         x_fused = x_fused.mean(dim=1)
-        node_feat = x_fused[graph.edge_label_index]
-        nodes_first = node_feat[0]
-        nodes_second = node_feat[1]
-        torch.cuda.empty_cache()
-        pred = self.mlp(torch.concat((nodes_first, nodes_second), dim=-1))
+        if self.train_type == "wingnn":
+            node_feat = x_fused[graph.edge_label_index]
+            nodes_first = node_feat[0]
+            nodes_second = node_feat[1]
+            torch.cuda.empty_cache()
+            pred = self.mlp(torch.concat((nodes_first, nodes_second), dim=-1))
+            return pred.squeeze(-1)
+        elif self.train_type == "hawkes":
+            return x_fused
+        else:
+            raise ValueError
 
-        return pred.squeeze(-1)
-
+    def predict(self, h, edge_index, bs=1024*64):
+        out = []
+        for edge in torch.split(edge_index, bs, dim=1):
+            out.append(self.mlp(torch.concat((h[edge[0]], h[edge[1]]), dim=-1)).squeeze(-1))
+        return torch.cat(out)
 
 class SemanticAttention(nn.Module):
     def __init__(self, in_dim, dropout, dim_a=50, num_relations=2):

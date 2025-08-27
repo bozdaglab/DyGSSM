@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 # sys.path.append(Path(__file__).parent / "roland-master")
 from roland.run.main_roland_call_wingnn import call
-from dataset_prep import load_r
+from pre_processing.dataset_prep import load_r
 import os
 
 def load_r_custom_dblp(e_feat, n_feat_, csv_file, ts_):
@@ -107,18 +107,36 @@ def check_rw_needed(prev, row, col):
 
 
 
-def make_usci_data(graphs, n_feat, e_feat, e_time, n_node, n_dim, device):
+def make_usci_data(graphs, 
+                   device,
+                   n_feat=None, 
+                   e_feat=None, 
+                   e_time=None, 
+                   n_node=None, 
+                   n_dim=None,
+                    hawkes=False):
     graph_l = []
     prev = None
     for idx, graph in tqdm(enumerate(graphs)):
-        graph_d = dgl.from_scipy(graph)
-        graph_d.edge_feature = torch.Tensor(e_feat[idx])
-        graph_d.edge_time = torch.Tensor(e_time[idx])
-        if n_feat[idx].shape[0] != n_node or n_feat[idx].shape[1] != n_dim:
-            n_feat_t = graph_l[idx - 1].node_feature
-            graph_d.node_feature = torch.Tensor(n_feat_t)
+        if hawkes:
+            graph_d = dgl.from_scipy(Graph(
+                node_feature=graph.x,
+                edge_index=graph.edge_index,
+                directed=True
+            ))
+            graph_d.node_feature = graph.x
+            graph_d.edge_index = graph.edge_index
         else:
-            graph_d.node_feature = torch.Tensor(n_feat[idx])
+            graph_d = dgl.from_scipy(graph)
+            if n_feat[idx].shape[0] != n_node or n_feat[idx].shape[1] != n_dim:
+                n_feat_t = graph_l[idx - 1].node_feature
+                graph_d.node_feature = torch.Tensor(n_feat_t)
+            else:
+                graph_d.node_feature = torch.Tensor(n_feat[idx])
+            graph_d.edge_time = torch.Tensor(e_time[idx])
+            graph_d.edge_feature = torch.Tensor(e_feat[idx])
+        
+
         graph_d = dgl.remove_self_loop(graph_d)
         graph_d = dgl.add_self_loop(graph_d)
         edges = graph_d.edges()
@@ -133,19 +151,23 @@ def make_usci_data(graphs, n_feat, e_feat, e_time, n_node, n_dim, device):
         edge_label_index.append(col.numpy().tolist()[:n_e])
         graph_d.edge_label = torch.Tensor(y)
         graph_d.edge_label_index = torch.LongTensor(edge_label_index)
+
         if prev is None:
-            graph_d.random_walk_node2vec_f, _ = generate_walks(graph=graph_d, num_walks=5)
+            graph_d.random_walk_node2vec_f, _ = random_walk_all(graph, graph_d.num_nodes(), walk_length=5, n_runs=30, top_k=4, seed=42)
+        # graph_d.random_walk_node2vec_f, _ = generate_walks(graph=graph_d, num_walks=5)
         else:
             effected_nodes, need_rw = check_rw_needed(prev, row, col)
             if need_rw:
-                current_walk, masks = generate_walks(graph=graph_d, effected_nodes=effected_nodes, num_walks=5)
+                current_walk, masks = random_walk_all(graph, graph_d.num_nodes(), walk_length=5, n_runs=30, top_k=4, seed=42, effected_nodes=effected_nodes)
+                # generate_walks(graph=graph_d, effected_nodes=effected_nodes, num_walks=5)
                 current_walk[torch.where(~masks)[0]] = graph_l[idx - 1].random_walk_node2vec_f[torch.where(~masks)[0]]
                 graph_d.random_walk_node2vec_f = current_walk
             else:
                 graph_d.random_walk_node2vec_f = graph_d[idx - 1].random_walk_node2vec_f
         graph_l.append(graph_d.to(device))
         prev = torch.stack([row, col]).t()
-
+    if hawkes:
+        return graph_l
     for idx, graph in tqdm(enumerate(graphs)):
         graph = Graph(
             node_feature=graph_l[idx].node_feature,
@@ -229,35 +251,94 @@ def make_data_deepsnap(datasets, dataset_name, idx_graph, path, device):
     return graph_l
 
 
-def load_data(path, rep, args,path_1, device):
-    dataset_name = args.dataset
-    if os.path.exists(f"{path}/processed_data/{dataset_name}/{rep}.pkl"):
-        with open(f"{path}/processed_data/{dataset_name}/{rep}.pkl", "rb") as file:
+def load_data(rep, args, path, path_1, dataset_name, device, model_type):
+    if os.path.exists(f"{path_1}/processed_data_{model_type}/{dataset_name}/{rep}.pkl"):
+        with open(f"{path_1}/processed_data_{model_type}/{dataset_name}/{rep}.pkl", "rb") as file:
             graph_l = pickle.load(file)
     else:
-        if args.dataset == 'dblp':
-            e_feat = np.load(f'{path_1}/dataset/{dataset_name}/ml_{dataset_name}.npy')
-            n_feat_ = np.load(f'{path_1}/dataset/{dataset_name}/ml_{dataset_name}_node.npy')
-            ts_ = np.load(f'{path_1}/dataset/{dataset_name}/ml_{dataset_name}_ts.npy')
-            csv_file = pd.read_csv(f'{path_1}/dataset/{dataset_name}/ml_{dataset_name}.csv')
+        if dataset_name == 'dblp':
+            e_feat = np.load(f'{path}/dataset/{dataset_name}/ml_{dataset_name}.npy')
+            n_feat_ = np.load(f'{path}/dataset/{dataset_name}/ml_{dataset_name}_node.npy')
+            ts_ = np.load(f'{path}/dataset/{dataset_name}/ml_{dataset_name}_ts.npy')
+            csv_file = pd.read_csv(f'{path}/dataset/{dataset_name}/ml_{dataset_name}.csv')
             datasets = load_r_custom_dblp(e_feat, n_feat_, csv_file, ts_)
             
-            graph_l = make_data_deepsnap(datasets, dataset_name, rep, path, device)
-        elif args.dataset in ["reddit-title", "bitcoinotc", "bitcoinalpha"]:
+            graph_l = make_data_deepsnap(datasets, dataset_name, rep, path_1, device)
+        elif dataset_name in ["reddit-title", "bitcoinotc", "bitcoinalpha"]:
             datasets, _ = call(rep, args)
-            graph_l = make_data_deepsnap(datasets[:178], dataset_name, rep, path, device)
-        elif args.dataset == "uci-msg":
-            graphs, e_feat, e_time, n_feat = load_r(args.dataset)
+            graph_l = make_data_deepsnap(datasets, dataset_name, rep, path, device)
+        elif dataset_name == "uci-msg":
+            graphs, e_feat, e_time, n_feat = load_r(dataset_name, path)
             n_dim = n_feat[0].shape[1]
             n_node = n_feat[0].shape[0]
-            graph_l = make_usci_data(graphs, n_feat, e_feat, e_time, n_node, n_dim, device)
+            graph_l = make_usci_data(graphs=graphs, 
+                                     n_feat=n_feat, 
+                                     e_feat=e_feat, 
+                                     e_time=e_time, 
+                                     n_node=n_node, 
+                                     n_dim=n_dim, 
+                                     device=device)
         else:
             raise ValueError
-        with open(f"{path}/processed_data/{dataset_name}/{rep}.pkl", "wb") as file:
+        with open(f"{path_1}/processed_data_{model_type}/{dataset_name}/{rep}.pkl", "wb") as file:
             pickle.dump(graph_l, file)
 
     return graph_l
 
+
+import scipy.sparse as sp
+def random_walk_all(adj_csr, num_nodes, walk_length=5, n_runs=30, top_k=4, seed=42, effected_nodes=None):
+    adj_csr = adj_csr + adj_csr.T
+    adj_csr = sp.csr_matrix(adj_csr)
+    rng = np.random.default_rng(seed)
+    final_walks = np.zeros((num_nodes, 5))
+    if effected_nodes is None:
+        mask = None
+    else:
+        all_nodes = torch.tensor(list(set(torch.cat([effected_nodes[0], effected_nodes[1]]).tolist())))
+        mask = torch.zeros(num_nodes, dtype=torch.bool)
+        mask[all_nodes] = True
+    # all_frequent_nodes = {}
+    n_nodes = adj_csr.shape[0]
+    
+    for node in range(n_nodes):
+        all_walks = []
+        for _ in range(n_runs):
+            walk = [node]
+            current = node
+            for _ in range(walk_length-1):
+                neighbors = adj_csr.indices[adj_csr.indptr[current]:adj_csr.indptr[current+1]]
+                if len(neighbors) == 0:
+                    break
+                current = rng.choice(neighbors)
+                walk.append(current)
+            all_walks.extend(walk)
+        
+        # count most frequent nodes visited (excluding the source itself)
+        counts = Counter(all_walks)
+        counts.pop(node, None)
+        most_common = [n for n, _ in counts.most_common(top_k)]
+        
+        # --- pad to length 5 ---
+        if len(most_common) == 0:
+            # if no sequence, repeat the source node 5 times
+            padded = [node] * top_k
+        elif len(most_common) < top_k:
+            # pad randomly with other nodes
+            needed = top_k - len(most_common)
+            candidates = list(set(range(n_nodes)) - set(most_common) - {node})
+            if len(candidates) >= needed:
+                extra = rng.choice(candidates, size=needed, replace=False).tolist()
+            else:
+                # if not enough candidates, allow repeats
+                extra = rng.choice(n_nodes, size=needed, replace=True).tolist()
+            padded = most_common + extra
+        else:
+            padded = most_common[:top_k]
+        final_walks[node] = np.concatenate([[node], padded])
+        # all_frequent_nodes[node] = padded
+    
+    return torch.tensor(final_walks.astype(int)), mask
 
 def generate_walks(graph, num_walks, effected_nodes=None):
     epochs = 30

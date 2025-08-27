@@ -124,8 +124,7 @@ def load_r_custom_dblp(e_feat, n_feat_, csv_file, ts_):
     return snapshot_list
 
 
-def load_r(name):
-    path = Path(__file__).parent
+def load_r(name, path):
     path = f"{path}/" + "dataset/" + name
     path_ei = path + '/' + 'edge_index/'
     path_nf = path + '/' + 'node_feature/'
