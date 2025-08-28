@@ -5,8 +5,7 @@ import numpy as np
 import torch
 import logging
 import sys
-sys.path.append("/nfs/home/UNT/ba0499/ba0499/Time_series_graph/roland-master")
-from graphgym.cmd_args import parse_args
+
 from graphgym.config import (cfg, assert_cfg, dump_cfg,
                              update_out_dir, get_parent_dir)
 from graphgym.loader import create_dataset, create_loader

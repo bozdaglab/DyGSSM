@@ -11,7 +11,7 @@ from train_test_models.test_wingnn_settings import test
 from train_test_models.train_wingnn_settings import train
 from config import cfg
 from Logger import getLogger
-from utils import create_optimizer
+from utils_helper import create_optimizer
 from helper import load_data
 import warnings
 from itertools import product
@@ -19,7 +19,7 @@ import os
 warnings.filterwarnings("ignore")
 
 
-def main(args, path, path_1, model_type):
+def main_wingnn(args, path, path_1, model_type):
     if not os.path.exists(f"{path_1}/results_{model_type}/{args.dataset}"):
         os.makedirs(f"{path_1}/results_{model_type}/{args.dataset}")
         os.makedirs(f"{path_1}/processed_data_{model_type}/{args.dataset}")

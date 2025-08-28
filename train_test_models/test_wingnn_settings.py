@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from copy import deepcopy
 from loss import prediction, Link_loss_meta
-from utils import report_rank_based_eval_meta
+from utils_helper import report_rank_based_eval_meta
 
 
 def test(graph_l, model, hippo_model, args, n, device):

@@ -14,6 +14,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import sys
+import scipy.sparse as sp
 from pathlib import Path
 # sys.path.append(Path(__file__).parent / "roland-master")
 from roland.run.main_roland_call_wingnn import call
@@ -119,11 +120,15 @@ def make_usci_data(graphs,
     prev = None
     for idx, graph in tqdm(enumerate(graphs)):
         if hawkes:
-            graph_d = dgl.from_scipy(Graph(
-                node_feature=graph.x,
-                edge_index=graph.edge_index,
-                directed=True
-            ))
+            src, dst = graph.edge_index
+            graph_d = dgl.graph((src, dst), num_nodes=graph.x.shape[0])
+            graph_d.node_feature = graph.x
+            graph_d.edge_index = graph.edge_index
+            edge_index = graph.edge_index.numpy()
+            num_nodes = graph.num_nodes
+            adj = sp.coo_matrix((np.ones(edge_index.shape[1]), (edge_index[0], edge_index[1])),
+                                shape=(num_nodes, num_nodes))
+
             graph_d.node_feature = graph.x
             graph_d.edge_index = graph.edge_index
         else:
@@ -153,12 +158,18 @@ def make_usci_data(graphs,
         graph_d.edge_label_index = torch.LongTensor(edge_label_index)
 
         if prev is None:
-            graph_d.random_walk_node2vec_f, _ = random_walk_all(graph, graph_d.num_nodes(), walk_length=5, n_runs=30, top_k=4, seed=42)
+            graph_d.random_walk_node2vec_f, _ = random_walk_all(
+                adj, 
+                graph_d.num_nodes(), 
+                walk_length=5, 
+                n_runs=30, 
+                top_k=4, 
+                seed=42)
         # graph_d.random_walk_node2vec_f, _ = generate_walks(graph=graph_d, num_walks=5)
         else:
             effected_nodes, need_rw = check_rw_needed(prev, row, col)
             if need_rw:
-                current_walk, masks = random_walk_all(graph, graph_d.num_nodes(), walk_length=5, n_runs=30, top_k=4, seed=42, effected_nodes=effected_nodes)
+                current_walk, masks = random_walk_all(adj, graph_d.num_nodes(), walk_length=5, n_runs=30, top_k=4, seed=42, effected_nodes=effected_nodes)
                 # generate_walks(graph=graph_d, effected_nodes=effected_nodes, num_walks=5)
                 current_walk[torch.where(~masks)[0]] = graph_l[idx - 1].random_walk_node2vec_f[torch.where(~masks)[0]]
                 graph_d.random_walk_node2vec_f = current_walk

@@ -13,7 +13,6 @@ sys.path.append(repo_path)
 from hawkesGNN.utils import seed_everything, generate_random_seeds, save_result
 import hawkesGNN.models
 sys.modules["models"] = hawkesGNN.models
-from hawkesGNN.train import LinkPrediction
 
 
 
@@ -34,7 +33,7 @@ def build_model(args, factory, device):
 
 
 
-def main(args, path_1, model_type):
+def main_hawkes(args, path_1, model_type):
     torch.set_num_threads(4)
     torch.set_num_interop_threads(4)
     torch.set_default_dtype(torch.float64)

@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(Path(__file__).parent.parent)
 from config import cfg
 from loss import Link_loss_meta, prediction
-from utils import report_rank_based_eval_meta
+from utils_helper import report_rank_based_eval_meta
 from Logger import getLogger
 from tqdm import tqdm
 logger = getLogger(cfg.log_path)

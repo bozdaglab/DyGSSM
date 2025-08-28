@@ -9,7 +9,7 @@ Space Model Gradient Update
 ### Create and activate environment
 ```shell script
 conda create -p dygssm_env python=3.8.10 -y
-conda activate dygssm_env
+conda activate ./dygssm_env
 pip install torch==2.2.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
 pip install torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
@@ -30,26 +30,31 @@ pip install -r requirements.txt
 ### Clone HawkesGNN, ROLAND, and WinGNN code 
 1 - Download roland code 
 ```shell script
-git clone git@github.com:snap-stanford/roland.git
-git clone git@github.com:oncemoe/hawkesGNN.git
+git clone https://github.com/snap-stanford/roland.git
+git clone https://github.com/oncemoe/hawkesGNN.git
 ```
 
 2 - Move files from extra_ to their coresponding folders 
 ```shell script
-mv main_roland_call_wingnn.py roland/run
+cd extra
+mv * ../roland/run
+cd ../
 ```
 3 - Add ROLAND  
 ```shell script
 cd roland
 pip install -e .
 get_roland_public_data.sh will generate the public dataset folder and download the datasets
+cd ../
 ```
 
 
 4 - run 
 ```shell script
-python main.py
+python main.py --dataset uci-msg --epoch 1 --repeat 1
 ```
+
+### Acknowledgement
 
 
 

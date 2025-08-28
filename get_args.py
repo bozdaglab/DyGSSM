@@ -10,9 +10,9 @@ def load_args_wingnn(path_1):
 
     parser.add_argument('--seed', type=int, default=2023, help='split seed')
 
-    parser.add_argument('--repeat', type=int, default=2, help='number of repeat model')
+    parser.add_argument('--repeat', type=int, default=10, help='number of repeat model')
 
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='number of epochs to train.')
     parser.add_argument('--out_dim', type=int, default=64,
                         help='model output dimension.')
@@ -91,7 +91,8 @@ def load_args_wingnn(path_1):
 def load_args_haks():
     parser = argparse.ArgumentParser(description='')
     # run configuration
-    parser.add_argument('--dataset', type=str, default='uci')
+    # ['bitcoinotc', 'bitcoinalpha', 'uci', 'as733', 'as733_full', 'redt', 'redb', 'sbm', 'stackoverflow']:
+    parser.add_argument('--dataset', type=str, default='bitcoinotc')
     parser.add_argument('--model', type=str, default='DyGSSM', choices=['gcn', 'gat', 
                         'hgcn', 'hgat', 'dysat', 'evolve-o', 'evolve-h', 'lstmgcn', 'wdgcn',
                         'vgrnn', 'roland', 'wingnn', 'DyGSSM', 'htgn', 'graphmixer', 'm2dne', 'ghp']) # 
@@ -99,10 +100,10 @@ def load_args_haks():
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--log_steps', type=int, default=1)
     parser.add_argument('--patiance', type=int, default=30)
-    parser.add_argument('--epochs', type=int, default=1) # 200
+    parser.add_argument('--epochs', type=int, default=200) # 200
     parser.add_argument('--eval_steps', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--runs', type=int, default=1) # 1
+    parser.add_argument('--runs', type=int, default=3) # 3
     parser.add_argument('--no_log', action="store_true")
     parser.add_argument('--row_mrr', action="store_true")
     
@@ -113,7 +114,7 @@ def load_args_haks():
     parser.add_argument('--n_layers', type=int, default=2)
     parser.add_argument('--n_hidden', type=int, default=128)
     parser.add_argument('--dropout', type=float, default=0.1)
-    parser.add_argument('--lr', type=float, default=0.00001)
+    parser.add_argument('--lr', type=float, default=0.003)
     parser.add_argument('--weight_decay', type=float, default=1e-3)
     
     # hawkes gnn

@@ -45,6 +45,7 @@ class DyGSSM(nn.Module):
         self.norm = nn.LayerNorm(out_features)
         self.activation = self.create_activation("relu")
 
+        self.init_embeddings = nn.Linear(in_features, out_features)
         self.emb = nn.Linear(out_features, hidden_dim)
         self.seq = nn.Conv1d(in_channels=5, out_channels=1, kernel_size=5, stride=1, padding=2, dilation=1)
         self.reverse_emb = nn.Linear(hidden_dim, out_features)
@@ -108,6 +109,9 @@ class DyGSSM(nn.Module):
         nn.init.kaiming_normal_(self.reverse_emb.weight, nonlinearity='relu')
         nn.init.zeros_(self.reverse_emb.bias)
 
+        nn.init.kaiming_normal_(self.init_embeddings.weight, nonlinearity='relu')
+        nn.init.zeros_(self.init_embeddings.bias)
+        
         nn.init.kaiming_normal_(self.seq.weight, nonlinearity='relu')
         nn.init.zeros_(self.seq.bias)
 
@@ -137,7 +141,8 @@ class DyGSSM(nn.Module):
         x_out = self.norm(sec_out + x_out)   
 
         walk_seq = graph.random_walk_node2vec_f
-        seq_embeddings = self.emb(x_out[walk_seq])
+        init_emb = self.init_embeddings(x.to("cuda:0"))
+        seq_embeddings = self.emb(init_emb[walk_seq])
         out_rw  = self.seq(seq_embeddings.to(self.device)).squeeze(1)
         last_out = self.reverse_emb(out_rw)
         inp = torch.stack([x_out, last_out])
