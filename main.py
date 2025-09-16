@@ -3,7 +3,7 @@ from get_args import load_args_wingnn, load_args_haks
 import os
 
 if __name__ == '__main__':
-    model_type = "hawkes"
+    model_type = "wingnn"
     path = f"{Path(__file__).parent}"
     path_1 = f"{path}/final_results"
     if not os.path.exists(path_1):
